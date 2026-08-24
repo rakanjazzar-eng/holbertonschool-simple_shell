@@ -1,15 +1,18 @@
- #ifndef MAIN_H
-#define MAIN_H
- 
+#ifndef main_h
+#define main_h
 #include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <string.h>
+#include <unistd.h>
 #include <sys/types.h>
-#include <sys/wait.h>
 #include <sys/stat.h>
-#include <fcntl.h>
- 
-/* Function prototypes will be added here as the shell grows */
- 
-#endif /* MAIN_H */
+#include <sys/wait.h>
+extern char **environ;
+char *getln(void);
+char **formatln(char *ln);
+char *compose(char *token, char *val);
+int launch_process(char **command);
+void search_exe(char **command);
+char *_getenv(char *name);
+void handler_function(int i);
+#endif
