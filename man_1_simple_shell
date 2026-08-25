@@ -1,0 +1,70 @@
+TH SIMPLE_SHELL 1 "August 2026" "hsh 1.0" "Simple Shell Manual"
+.SH NAME
+hsh \- a simple UNIX command line interpreter
+.SH SYNOPSIS
+.B hsh
+.SH DESCRIPTION
+.B hsh
+is a small UNIX command language interpreter (shell), similar to
+.BR sh (1).
+It reads commands either from a terminal (interactive mode) or from a
+file/pipe given on its standard input (non\-interactive mode), and
+executes them.
+.PP
+When started,
+.B hsh
+prints a prompt
+.RB ( ($)\ )
+and waits for a command line on interactive mode. No prompt is printed
+when run non\-interactively (for example, when its input is a pipe or
+a file).
+.PP
+Each line read is split into whitespace\-separated words. The first
+word is the command to run, and any remaining words are passed to it
+as arguments. Leading and trailing whitespace on the line is ignored.
+.PP
+.B hsh
+then forks a child process and uses
+.BR execve (2)
+to run the requested program with the given arguments, waiting for it
+to terminate before printing the prompt again.
+.SH EXIT STATUS
+.B hsh
+returns the exit status of the last command executed. If a command is
+not found, an exit status of 127 is returned.
+.SH EXAMPLES
+Interactive mode:
+.PP
+.nf
+.RS
+$ ./hsh
+($) /bin/ls
+hsh main.c main.h
+($) exit
+$
+.RE
+.fi
+.PP
+Non\-interactive mode, with an argument passed to the command:
+.PP
+.nf
+.RS
+$ echo "/bin/ls /var" | ./hsh
+backups
+cache
+lib
+...
+$
+.RE
+.fi
+.SH BUGS
+Report bugs by opening an issue on the project's GitHub repository.
+.SH AUTHOR
+Written as part of the Holberton School / ALX System Engineering &
+DevOps curriculum. See the AUTHORS file at the root of the repository
+for the full list of contributors.
+.SH SEE ALSO
+.BR sh (1),
+.BR execve (2),
+.BR fork (2),
+.BR wait (2)
