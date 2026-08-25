@@ -1,56 +1,47 @@
 #include "shell.h"
 
 /**
- * display_prompt - Renders the standard shell prompt symbol.
- */
-void display_prompt(void)
-{
-	if (isatty(STDIN_FILENO))
-		printf("($) ");
-}
-
-/**
- * execute_command - Verifies path and runs the command in a new process.
- * @args: Tokenized command name along with its parameters.
- * @prog_name: Name of the shell executable for dynamic error reporting.
+ * execute - Launches a process block to handle system calls.
+ * @args: Array containing the command text along with variables.
+ * @prog: The binary name of our shell for generating logs.
  *
- * Return: Resolved operation status code.
+ * Return: Numeric exit state status code from the active program.
  */
-int execute_command(char **args, char *prog_name)
+int execute(char **args, char *prog)
 {
 	pid_t pid;
-	char *actual_cmd;
 	int status;
+	char *cmd;
 
-	if (args == NULL || args[0] == NULL)
-		return (0);
-
-	actual_cmd = get_location(args[0]);
-	if (actual_cmd == NULL)
+	cmd = find_path(args[0]);
+	if (cmd == NULL)
 	{
-		fprintf(stderr, "%s: 1: %s: not found\n", prog_name, args[0]);
+		fprintf(stderr, "%s: 1: %s: not found\n", prog, args[0]);
 		return (127);
 	}
-
 	pid = fork();
 	if (pid == -1)
 	{
-		perror("Error");
-		free(actual_cmd);
+		perror("fork");
+		free(cmd);
 		return (1);
 	}
 	if (pid == 0)
 	{
-		execve(actual_cmd, args, environ);
-		perror(prog_name);
-		free(actual_cmd);
-		exit(127);
+		if (execve(cmd, args, environ) == -1)
+		{
+			perror("execve");
+			free(cmd);
+			exit(1);
+		}
 	}
-	wait(&status);
-	free(actual_cmd);
-
-	if (WIFEXITED(status))
-		return (WEXITSTATUS(status));
+	else
+	{
+		waitpid(pid, &status, 0);
+		free(cmd);
+		if (WIFEXITED(status))
+			return (WEXITSTATUS(status));
+	}
 	return (0);
 }
 

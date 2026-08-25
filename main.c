@@ -1,76 +1,102 @@
 #include "shell.h"
 
 /**
- * tokenize_input - Parses the command line string into separate arguments.
- * @line: The raw input string provided by the user.
- * @args: The destination pointer array to store the parsed tokens.
+ * token - Breaks an incoming string into individual command arguments.
+ * @line: The raw stream array retrieved from the input.
+ *
+ * Return: A pointer block holding string elements, or NULL if it fails.
  */
-void tokenize_input(char *line, char **args)
+char **token(char *line)
 {
-	char *token;
-	int i = 0;
+	char **args;
+	char *token_ptr;
+	int i;
 
-	token = strtok(line, " \t");
-	while (token != NULL && i < 63)
+	i = 0;
+	args = malloc(sizeof(char *) * 64);
+	if (!args)
+		return (NULL);
+
+	token_ptr = strtok(line, " \t\n");
+	while (token_ptr != NULL)
 	{
-		args[i] = token;
+		args[i] = token_ptr;
 		i++;
-		token = strtok(NULL, " \t");
+		token_ptr = strtok(NULL, " \t\n");
 	}
 	args[i] = NULL;
+	return (args);
 }
 
 /**
- * main - Core processing loop for the command line interpreter.
- * @argc: Command line argument count (unused).
- * @argv: Array of invocation argument strings.
+ * print_env - Loops and outputs the loaded system environment variables.
  *
- * Return: Status code of the final executed operation.
+ * Return: Void.
+ */
+void print_env(void)
+{
+	int i;
+
+	for (i = 0; environ[i]; i++)
+	{
+		write(STDOUT_FILENO, environ[i], strlen(environ[i]));
+		write(STDOUT_FILENO, "\n", 1);
+	}
+}
+
+/**
+ * main - Primary loop driver that controls the shell terminal.
+ * @argc: Number of arguments passed to the program (unused).
+ * @argv: Array of dynamic startup string pointers.
+ *
+ * Return: Zero if completed successfully.
  */
 int main(int argc, char **argv)
 {
-	char *line = NULL;
-	char *args[64];
-	size_t len = 0;
-	int status = 0;
-	int e;
+	char *line;
+	size_t len;
+	ssize_t nread;
+	char **args;
+	int last_status;
 
 	(void)argc;
-
+	line = NULL;
+	len = 0;
+	last_status = 0;
 	while (1)
 	{
-		display_prompt();
-		if (getline(&line, &len, stdin) == -1)
+		if (isatty(STDIN_FILENO))
+			write(STDOUT_FILENO, "($) ", 4);
+		nread = getline(&line, &len, stdin);
+		if (nread == -1)
 		{
+			if (isatty(STDIN_FILENO))
+				write(STDOUT_FILENO, "\n", 1);
 			free(line);
-			exit(status);
+			exit(last_status);
 		}
-		line[strcspn(line, "\n")] = '\0';
-		tokenize_input(line, args);
-
-		if (args[0] == NULL)
+		args = token(line);
+		if (args == NULL || args[0] == NULL)
+		{
+			free(args);
 			continue;
-
-		/* Intercept the built-in exit statement */
+		}
 		if (strcmp(args[0], "exit") == 0)
 		{
+			free(args);
 			free(line);
-			exit(status);
+			exit(last_status);
 		}
-
-		/* Intercept the built-in env statement */
 		if (strcmp(args[0], "env") == 0)
 		{
-			e = 0;
-			while (environ[e] != NULL)
-			{
-				printf("%s\n", environ[e]);
-				e++;
-			}
+			print_env();
+			free(args);
 			continue;
 		}
-		status = execute_command(args, argv[0]);
+		last_status = execute(args, argv[0]);
+		free(args);
 	}
-	return (status);
+	free(line);
+	return (0);
 }
 

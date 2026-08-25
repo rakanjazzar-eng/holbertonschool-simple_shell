@@ -1,41 +1,42 @@
 #include "shell.h"
 
 /**
- * _getenv - Extracts the value of a specified environment variable.
- * @name: The identity key of the environment variable to look up.
+ * _getenv - Searches the local ecosystem array for a targeted item.
+ * @name: Identifier variable name to query.
  *
- * Return: A pointer directly to the variable's value data, or NULL if absent.
+ * Return: Text string matching the value, or NULL if nonexistent.
  */
-char *_getenv(const char *name)
+char *_getenv(char *name)
 {
-	int i = 0;
-	size_t len;
-
-	if (name == NULL || environ == NULL)
-		return (NULL);
+	int i;
+	int len;
 
 	len = strlen(name);
 	for (i = 0; environ[i]; i++)
 	{
-		if (strncmp(environ[i], name, len) == 0 && environ[i][len] == '=')
-			return (environ[i] + len + 1);
+		if (strncmp(environ[i], name, len) == 0)
+		{
+			if (environ[i][len] == '=')
+				return (environ[i] + len + 1);
+		}
 	}
 	return (NULL);
 }
 
 /**
- * get_location - Resolves and extracts the absolute system path of a command.
- * @cmd: The targeted standalone command name to be located.
+ * find_path - Cycles through system directories to discover binaries.
+ * @cmd: Standalone application name to map.
  *
- * Return: A newly allocated string containing the total path, or NULL on error.
+ * Return: Resolved full path target, or NULL if unfound.
  */
-char *get_location(char *cmd)
+char *find_path(char *cmd)
 {
-	char *path, *p_cpy, *tok, *f_path;
+	char *path;
+	char *path_copy;
+	char *dir;
+	char *full_path;
 	struct stat st;
 
-	if (cmd == NULL)
-		return (NULL);
 	if (strchr(cmd, '/'))
 	{
 		if (stat(cmd, &st) == 0)
@@ -43,30 +44,30 @@ char *get_location(char *cmd)
 		return (NULL);
 	}
 	path = _getenv("PATH");
-	if (!path || *path == '\0')
+	if (path == NULL)
 		return (NULL);
-	p_cpy = strdup(path);
-	if (!p_cpy)
+	path_copy = strdup(path);
+	if (!path_copy)
 		return (NULL);
-	tok = strtok(p_cpy, ":");
-	while (tok)
+	dir = strtok(path_copy, ":");
+	while (dir != NULL)
 	{
-		f_path = malloc(strlen(tok) + strlen(cmd) + 2);
-		if (!f_path)
+		full_path = malloc(strlen(dir) + strlen(cmd) + 2);
+		if (!full_path)
 		{
-			free(p_cpy);
+			free(path_copy);
 			return (NULL);
 		}
-		sprintf(f_path, "%s/%s", tok, cmd);
-		if (stat(f_path, &st) == 0)
+		sprintf(full_path, "%s/%s", dir, cmd);
+		if (stat(full_path, &st) == 0)
 		{
-			free(p_cpy);
-			return (f_path);
+			free(path_copy);
+			return (full_path);
 		}
-		free(f_path);
-		tok = strtok(NULL, ":");
+		free(full_path);
+		dir = strtok(NULL, ":");
 	}
-	free(p_cpy);
+	free(path_copy);
 	return (NULL);
 }
 
