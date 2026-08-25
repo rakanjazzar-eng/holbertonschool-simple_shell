@@ -16,12 +16,8 @@ extern char *prog_name;
 
 #define PROMPT "($) "
 
-char *getln(void);
-char **formatln(char *ln);
-char *compose(char *token, char *val);
-void launch_process(char **command);
-void search_exe(char **command);
-char *_getenv(char *name);
-void handler_function(int i);
 
+
+void launch_process(char **command,char *prog_name);
+void run_shell(char *prog_name);
 #endif /* MAIN_H */

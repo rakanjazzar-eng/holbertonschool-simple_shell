@@ -1,6 +1,6 @@
 #include "main.h"
 
-char *prog_name;
+
 
 /**
  * main - entry point of the simple shell
@@ -11,37 +11,51 @@ char *prog_name;
  */
 int main(int argc, char **argv)
 {
-	char *line;
-	char *args[2];
-	int interactive = isatty(STDIN_FILENO);
-
+	
 	(void)argc;
-	prog_name = argv[0];
-
-	while (1)
-	{
-		if (interactive)
-			write(STDOUT_FILENO, PROMPT, strlen(PROMPT));
-
-		line = getln();
-		if (line == NULL)
-		{
-			if (interactive)
-				write(STDOUT_FILENO, "\n", 1);
-			break;
-		}
-
-		if (line[0] == '\0')
-		{
-			free(line);
-			continue;
-		}
-
-		args[0] = line;
-		args[1] = NULL;
-		launch_process(args);
-		free(line);
-	}
-
+    run_shell(argv[0]);
 	return (0);
+}
+/**
+ * run_shell - main loop for reading and processing commands
+ * @prog_name: name of the executable for error printing
+ */
+void run_shell(char *prog_name)
+{
+    char *line = NULL;
+    size_t len = 0;
+    ssize_t nread;
+    char *args[1024];
+    char *token;
+    int i;
+
+    while (1)
+    {
+        if (isatty(STDIN_FILENO) == 1)
+            write(STDOUT_FILENO, "($) ", 4);
+
+        nread = getline(&line, &len, stdin);
+
+        if (nread == -1)
+        {
+            free(line);
+            exit(EXIT_SUCCESS);
+        }
+
+        i = 0;
+        token = strtok(line, " \t\n");
+        while (token != NULL)
+        {
+            args[i++] = token;
+            token = strtok(NULL, " \t\n");
+        }
+        args[i] = NULL;
+
+        if (args[0] == NULL)
+            continue;
+
+       launch_process(args, prog_name);
+    }
+
+    free(line);
 }

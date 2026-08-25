@@ -7,7 +7,7 @@
  *
  * Return: void
  */
-void launch_process(char **command)
+void launch_process(char **command,char *prog_name)
 {
 	pid_t pid;
 	int status;
