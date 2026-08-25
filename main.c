@@ -1,76 +1,76 @@
 #include "shell.h"
 
 /**
- * main - Entry point for the simple UNIX command interpreter.
- * @argc: Argument count (unused).
- * @argv: Argument vector, argv[0] used for error messages.
- *
- * Return: The last command exit status.
+ * tokenize_input - Parses the command line string into separate arguments.
+ * @line: The raw input string provided by the user.
+ * @args: The destination pointer array to store the parsed tokens.
  */
-int main(int argc __attribute__((unused)), char **argv)
+void tokenize_input(char *line, char **args)
+{
+	char *token;
+	int i = 0;
+
+	token = strtok(line, " \t");
+	while (token != NULL && i < 63)
+	{
+		args[i] = token;
+		i++;
+		token = strtok(NULL, " \t");
+	}
+	args[i] = NULL;
+}
+
+/**
+ * main - Core processing loop for the command line interpreter.
+ * @argc: Command line argument count (unused).
+ * @argv: Array of invocation argument strings.
+ *
+ * Return: Status code of the final executed operation.
+ */
+int main(int argc, char **argv)
 {
 	char *line = NULL;
-	char **args = NULL;
-	int last_status = 0;
+	char *args[64];
+	size_t len = 0;
+	int status = 0;
+	int e;
+
+	(void)argc;
 
 	while (1)
 	{
-		/* 1. Display prompt only in interactive mode */
-		if (isatty(STDIN_FILENO))
-		{
-			write(STDOUT_FILENO, "($) ", 4);
-			fflush(stdout);
-		}
-
-		/* 2. Read line and handle EOF (Ctrl+D) condition */
-		line = read_line();
-		if (line == NULL)
-		{
-			if (isatty(STDIN_FILENO))
-				write(STDOUT_FILENO, "\n", 1);
-			break;
-		}
-
-		if (line[0] == '\0')
+		display_prompt();
+		if (getline(&line, &len, stdin) == -1)
 		{
 			free(line);
-			continue;
+			exit(status);
 		}
+		line[strcspn(line, "\n")] = '\0';
+		tokenize_input(line, args);
 
-		/* 3. Tokenize input line into arguments array */
-		args = split_line(line);
-		if (args == NULL || args[0] == NULL)
-		{
-			free(line);
-			free(args);
+		if (args[0] == NULL)
 			continue;
-		}
 
-		/* 4. Built-in: exit */
+		/* Intercept the built-in exit statement */
 		if (strcmp(args[0], "exit") == 0)
 		{
 			free(line);
-			free(args);
-			exit(last_status);
+			exit(status);
 		}
 
-		/* 5. Built-in: env */
+		/* Intercept the built-in env statement */
 		if (strcmp(args[0], "env") == 0)
 		{
-			builtin_env();
-			last_status = 0;
-			free(line);
-			free(args);
+			e = 0;
+			while (environ[e] != NULL)
+			{
+				printf("%s\n", environ[e]);
+				e++;
+			}
 			continue;
 		}
-
-		/* 6. Execute external command via PATH and fork */
-		last_status = execute_command(args, argv[0]);
-
-		free(line);
-		free(args);
+		status = execute_command(args, argv[0]);
 	}
-
-	return (last_status);
+	return (status);
 }
 

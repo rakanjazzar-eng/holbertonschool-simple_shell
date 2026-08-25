@@ -3,20 +3,20 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 #include <unistd.h>
+#include <string.h>
+#include <sys/wait.h>
 #include <sys/types.h>
 #include <sys/stat.h>
-#include <sys/wait.h>
 
 extern char **environ;
 
-/* Core Core Functions */
-char *read_line(void);
-char **split_line(char *line);
-int execute_command(char **args, char *argv0);
-void builtin_env(void);
-char *find_in_path(char *cmd);
+/* Function prototypes for core system routines */
+void display_prompt(void);
+int execute_command(char **args, char *prog_name);
+char *_getenv(const char *name);
+char *get_location(char *cmd);
+void tokenize_input(char *line, char **args);
 
 #endif /* SHELL_H */
 
