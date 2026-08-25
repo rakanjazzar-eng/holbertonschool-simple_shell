@@ -1,61 +1,102 @@
-#include "main.h"
-
-
+#include "shell.h"
 
 /**
- * main - entry point of the simple shell
- * @argc: argument count (unused)
- * @argv: argument vector, argv[0] is the name the shell was invoked with
+ * token - Breaks an incoming string into individual command arguments.
+ * @line: The raw stream array retrieved from the input.
  *
- * Return: always 0
+ * Return: A pointer block holding string elements, or NULL if it fails.
+ */
+char **token(char *line)
+{
+	char **args;
+	char *token_ptr;
+	int i;
+
+	i = 0;
+	args = malloc(sizeof(char *) * 64);
+	if (!args)
+		return (NULL);
+
+	token_ptr = strtok(line, " \t\n");
+	while (token_ptr != NULL)
+	{
+		args[i] = token_ptr;
+		i++;
+		token_ptr = strtok(NULL, " \t\n");
+	}
+	args[i] = NULL;
+	return (args);
+}
+
+/**
+ * print_env - Loops and outputs the loaded system environment variables.
+ *
+ * Return: Void.
+ */
+void print_env(void)
+{
+	int i;
+
+	for (i = 0; environ[i]; i++)
+	{
+		write(STDOUT_FILENO, environ[i], strlen(environ[i]));
+		write(STDOUT_FILENO, "\n", 1);
+	}
+}
+
+/**
+ * main - Primary loop driver that controls the shell terminal.
+ * @argc: Number of arguments passed to the program (unused).
+ * @argv: Array of dynamic startup string pointers.
+ *
+ * Return: Zero if completed successfully.
  */
 int main(int argc, char **argv)
 {
-	
+	char *line;
+	size_t len;
+	ssize_t nread;
+	char **args;
+	int last_status;
+
 	(void)argc;
-    run_shell(argv[0]);
+	line = NULL;
+	len = 0;
+	last_status = 0;
+	while (1)
+	{
+		if (isatty(STDIN_FILENO))
+			write(STDOUT_FILENO, "($) ", 4);
+		nread = getline(&line, &len, stdin);
+		if (nread == -1)
+		{
+			if (isatty(STDIN_FILENO))
+				write(STDOUT_FILENO, "\n", 1);
+			free(line);
+			exit(last_status);
+		}
+		args = token(line);
+		if (args == NULL || args[0] == NULL)
+		{
+			free(args);
+			continue;
+		}
+		if (strcmp(args[0], "exit") == 0)
+		{
+			free(args);
+			free(line);
+			exit(last_status);
+		}
+		if (strcmp(args[0], "env") == 0)
+		{
+			print_env();
+			free(args);
+			continue;
+		}
+		last_status = execute(args, argv[0]);
+		free(args);
+	}
+	free(line);
 	return (0);
 }
-/**
- * run_shell - main loop for reading and processing commands
- * @prog_name: name of the executable for error printing
- */
-void run_shell(char *prog_name)
-{
-    char *line = NULL;
-    size_t len = 0;
-    ssize_t nread;
-    char *args[1024];
-    char *token;
-    int i;
 
-    while (1)
-    {
-        if (isatty(STDIN_FILENO) == 1)
-            write(STDOUT_FILENO, "($) ", 4);
-
-        nread = getline(&line, &len, stdin);
-
-        if (nread == -1)
-        {
-            free(line);
-            exit(EXIT_SUCCESS);
-        }
-
-        i = 0;
-        token = strtok(line, " \t\n");
-        while (token != NULL)
-        {
-            args[i++] = token;
-            token = strtok(NULL, " \t\n");
-        }
-        args[i] = NULL;
-
-        if (args[0] == NULL)
-            continue;
-
-       launch_process(args, prog_name);
-    }
-
-    free(line);
-}
