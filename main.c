@@ -11,12 +11,13 @@ void run_shell(char *prog_name)
 	char *line = NULL, *actual_path = NULL;
 	size_t len = 0;
 	ssize_t nread;
-	char *args[1024]; /* تعريف مصفوفة المؤشرات بشكل صحيح وسليم */
+	char *args[1024];
 	char *token;
 	int i;
 
 	while (1)
 	{
+		/* Print prompt only if connected to a terminal */
 		if (isatty(STDIN_FILENO) == 1)
 			write(STDOUT_FILENO, "($) ", 4);
 
@@ -27,6 +28,7 @@ void run_shell(char *prog_name)
 			exit(EXIT_SUCCESS);
 		}
 
+		/* Tokenize the input line into an array of arguments */
 		i = 0;
 		token = strtok(line, " \t\n");
 		while (token != NULL && i < 1023)
@@ -36,29 +38,31 @@ void run_shell(char *prog_name)
 		}
 		args[i] = NULL;
 
+		/* Skip empty lines safely */
 		if (args[0] == NULL)
 			continue;
 
-		/* معالجة الأمر المدمج exit */
+		/* Handle the "exit" Built-in command */
 		if (strcmp(args[0], "exit") == 0)
 		{
 			free(line);
 			exit(EXIT_SUCCESS);
 		}
 
-		/* معالجة الأمر المدمج env */
+		/* Handle the "env" Built-in command */
 		if (strcmp(args[0], "env") == 0)
 		{
 			print_env();
 			continue;
 		}
 
-		/* البحث في الـ PATH والتحقق قبل الـ fork */
+		/* Resolve command full path via PATH directories before fork */
 		actual_path = find_path(args[0]);
 		if (actual_path == NULL)
 		{
 			fprintf(stderr, "%s: 1: %s: not found\n", prog_name, args[0]);
 
+			/* Exit with 127 if in non-interactive mode */
 			if (isatty(STDIN_FILENO) != 1)
 			{
 				free(line);
