@@ -1,27 +1,95 @@
 #include "main.h"
- 
+
 /**
- * launch_process - forks the current process and executes a command
- * @command: NULL-terminated array of arguments; command[0] is the
- * path of the program to execute
+ * _getenv - Custom implementation to retrieve environment variables.
+ * @name: Name of the environment variable.
  *
- * Return: void
+ * Return: Pointer to the variable's value, or NULL if not found.
  */
-void launch_process(char **command,char *prog_name)
+char *_getenv(const char *name)
+{
+	int i = 0;
+	size_t len = strlen(name);
+
+	while (environ[i] != NULL)
+	{
+		if (strncmp(environ[i], name, len) == 0 && environ[i][len] == '=')
+			return (environ[i] + len + 1);
+		i++;
+	}
+	return (NULL);
+}
+
+/**
+ * find_path - Searches for a command across the directories in PATH.
+ * @command: The command name to look up.
+ *
+ * Return: Full path string if found, or NULL if it doesn't exist.
+ */
+char *find_path(char *command)
+{
+	char *path_env = _getenv("PATH");
+	char *path_copy, *token, *full_path;
+	struct stat st;
+
+	/* Check if command is already a full or relative path */
+	if (command[0] == '/' || command[0] == '.')
+	{
+		if (stat(command, &st) == 0)
+			return (strdup(command));
+		return (NULL);
+	}
+	if (!path_env)
+		return (NULL);
+
+	path_copy = strdup(path_env);
+	token = strtok(path_copy, ":");
+	while (token != NULL)
+	{
+		/* Allocate space for: token + '/' + command + '\0' */
+		full_path = malloc(strlen(token) + strlen(command) + 2);
+		if (!full_path)
+		{
+			free(path_copy);
+			return (NULL);
+		}
+		sprintf(full_path, "%s/%s", token, command);
+		if (stat(full_path, &st) == 0)
+		{
+			free(path_copy);
+			return (full_path);
+		}
+		free(full_path);
+		token = strtok(NULL, ":");
+	}
+	free(path_copy);
+	return (NULL);
+}
+
+/**
+ * launch_process - Forks the current process and executes a command.
+ * @command: NULL-terminated array of arguments.
+ * @prog_name: Name of the executable for error printing.
+ * @actual_path: The resolved full path of the command.
+ *
+ * Return: Void.
+ */
+void launch_process(char **command, char *prog_name, char *actual_path)
 {
 	pid_t pid;
 	int status;
- 
+
 	pid = fork();
 	if (pid == -1)
 	{
 		perror(prog_name);
 		return;
 	}
- 
+
 	if (pid == 0)
 	{
-		if (execve(command[0], command, environ) == -1)
+		/* Execute command using the verified full path */
+		if (execve(actual_path, command, environ) == -1)
 		{
 			perror(prog_name);
 			_exit(127);
@@ -33,6 +101,4 @@ void launch_process(char **command,char *prog_name)
 			perror(prog_name);
 	}
 }
- 
-
 

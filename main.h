@@ -20,4 +20,7 @@ extern char *prog_name;
 
 void launch_process(char **command,char *prog_name);
 void run_shell(char *prog_name);
+char *_getenv(const char *name);
+char *find_path(char *command);
+
 #endif /* MAIN_H */
