@@ -11,7 +11,7 @@ void run_shell(char *prog_name)
 	char *line = NULL, *actual_path = NULL;
 	size_t len = 0;
 	ssize_t nread;
-	char *args;
+	char *args[1024]; /* تعريف مصفوفة المؤشرات بشكل صحيح وسليم */
 	char *token;
 	int i;
 
@@ -29,37 +29,36 @@ void run_shell(char *prog_name)
 
 		i = 0;
 		token = strtok(line, " \t\n");
-		while (token != NULL)
+		while (token != NULL && i < 1023)
 		{
 			args[i++] = token;
 			token = strtok(NULL, " \t\n");
 		}
 		args[i] = NULL;
 
-		if (args == NULL)
+		if (args[0] == NULL)
 			continue;
 
-		/* 1. Handling the "exit" Built-in command */
-		if (strcmp(args, "exit") == 0)
+		/* معالجة الأمر المدمج exit */
+		if (strcmp(args[0], "exit") == 0)
 		{
 			free(line);
 			exit(EXIT_SUCCESS);
 		}
 
-		/* 2. Handling the "env" Built-in command */
-		if (strcmp(args, "env") == 0)
+		/* معالجة الأمر المدمج env */
+		if (strcmp(args[0], "env") == 0)
 		{
 			print_env();
 			continue;
 		}
 
-		/* 3. Normal commands handling via PATH and fork */
-		actual_path = find_path(args);
+		/* البحث في الـ PATH والتحقق قبل الـ fork */
+		actual_path = find_path(args[0]);
 		if (actual_path == NULL)
 		{
-			fprintf(stderr, "%s: 1: %s: not found\n", prog_name, args);
-			
-			/* If non-interactive mode and command not found, exit with 127 */
+			fprintf(stderr, "%s: 1: %s: not found\n", prog_name, args[0]);
+
 			if (isatty(STDIN_FILENO) != 1)
 			{
 				free(line);
@@ -77,7 +76,7 @@ void run_shell(char *prog_name)
 /**
  * main - Entry point of the simple shell.
  * @argc: Argument count (unused).
- * @argv: Argument vector, argv is the shell invocation name.
+ * @argv: Argument vector, argv[0] is the shell invocation name.
  *
  * Return: Always 0 (Success).
  */
@@ -85,7 +84,7 @@ int main(int argc, char **argv)
 {
 	(void)argc;
 
-	run_shell(argv);
+	run_shell(argv[0]);
 	return (0);
 }
 
