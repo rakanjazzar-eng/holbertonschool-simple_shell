@@ -17,9 +17,8 @@ void run_shell(char *prog_name)
 
 	while (1)
 	{
-		/* Print prompt only if standard input is a terminal */
 		if (isatty(STDIN_FILENO) == 1)
-			write(STDOUT_FILENO, ":) ", 3);
+			write(STDOUT_FILENO, "($) ", 4);
 
 		nread = getline(&line, &len, stdin);
 		if (nread == -1)
@@ -28,7 +27,6 @@ void run_shell(char *prog_name)
 			exit(EXIT_SUCCESS);
 		}
 
-		/* Tokenize the input line into arguments */
 		i = 0;
 		token = strtok(line, " \t\n");
 		while (token != NULL)
@@ -38,11 +36,9 @@ void run_shell(char *prog_name)
 		}
 		args[i] = NULL;
 
-		/* Skip empty lines where only Enter was pressed */
 		if (args[0] == NULL)
 			continue;
 
-		/* Check if command exists in PATH before calling fork */
 		actual_path = find_path(args[0]);
 		if (actual_path == NULL)
 		{
@@ -50,7 +46,6 @@ void run_shell(char *prog_name)
 			continue;
 		}
 
-		/* Execute the verified command path */
 		launch_process(args, prog_name, actual_path);
 		free(actual_path);
 	}

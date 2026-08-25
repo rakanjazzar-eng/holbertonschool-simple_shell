@@ -11,6 +11,9 @@ char *_getenv(const char *name)
 	int i = 0;
 	size_t len = strlen(name);
 
+	if (!environ || !name)
+		return (NULL);
+
 	while (environ[i] != NULL)
 	{
 		if (strncmp(environ[i], name, len) == 0 && environ[i][len] == '=')
@@ -32,21 +35,24 @@ char *find_path(char *command)
 	char *path_copy, *token, *full_path;
 	struct stat st;
 
-	/* Check if command is already a full or relative path */
-	if (command[0] == '/' || command[0] == '.')
+	if (!command || strlen(command) == 0)
+		return (NULL);
+
+	/* If command contains a slash '/', it's a direct path, check it directly */
+	if (strchr(command, '/') != NULL)
 	{
 		if (stat(command, &st) == 0)
 			return (strdup(command));
 		return (NULL);
 	}
-	if (!path_env)
+
+	if (!path_env || strlen(path_env) == 0)
 		return (NULL);
 
 	path_copy = strdup(path_env);
 	token = strtok(path_copy, ":");
 	while (token != NULL)
 	{
-		/* Allocate space for: token + '/' + command + '\0' */
 		full_path = malloc(strlen(token) + strlen(command) + 2);
 		if (!full_path)
 		{
@@ -88,7 +94,6 @@ void launch_process(char **command, char *prog_name, char *actual_path)
 
 	if (pid == 0)
 	{
-		/* Execute command using the verified full path */
 		if (execve(actual_path, command, environ) == -1)
 		{
 			perror(prog_name);

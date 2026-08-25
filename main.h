@@ -8,19 +8,13 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <sys/wait.h>
-#include <fcntl.h>
-#include <signal.h>
 
 extern char **environ;
-extern char *prog_name;
 
-#define PROMPT "($) "
-
-
-
-void launch_process(char **command,char *prog_name);
+void launch_process(char **command, char *prog_name, char *actual_path);
 void run_shell(char *prog_name);
 char *_getenv(const char *name);
 char *find_path(char *command);
 
 #endif /* MAIN_H */
+
