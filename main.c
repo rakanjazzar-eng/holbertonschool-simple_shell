@@ -39,6 +39,21 @@ void run_shell(char *prog_name)
 		if (args[0] == NULL)
 			continue;
 
+		/* 1. Handling the "exit" Built-in command */
+		if (strcmp(args[0], "exit") == 0)
+		{
+			free(line);
+			exit(EXIT_SUCCESS);
+		}
+
+		/* 2. Handling the "env" Built-in command */
+		if (strcmp(args[0], "env") == 0)
+		{
+			print_env();
+			continue;
+		}
+
+		/* 3. Normal commands handling via PATH and fork */
 		actual_path = find_path(args[0]);
 		if (actual_path == NULL)
 		{

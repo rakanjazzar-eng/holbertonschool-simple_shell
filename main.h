@@ -15,6 +15,7 @@ void launch_process(char **command, char *prog_name, char *actual_path);
 void run_shell(char *prog_name);
 char *_getenv(const char *name);
 char *find_path(char *command);
+void print_env(void);
 
 #endif /* MAIN_H */
 

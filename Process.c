@@ -38,7 +38,6 @@ char *find_path(char *command)
 	if (!command || strlen(command) == 0)
 		return (NULL);
 
-	/* If command contains a slash '/', it's a direct path, check it directly */
 	if (strchr(command, '/') != NULL)
 	{
 		if (stat(command, &st) == 0)
@@ -104,6 +103,22 @@ void launch_process(char **command, char *prog_name, char *actual_path)
 	{
 		if (waitpid(pid, &status, 0) == -1)
 			perror(prog_name);
+	}
+}
+
+/**
+ * print_env - Prints the current environment variables to standard output.
+ *
+ * Return: Void.
+ */
+void print_env(void)
+{
+	int i = 0;
+
+	while (environ[i] != NULL)
+	{
+		printf("%s\n", environ[i]);
+		i++;
 	}
 }
 
