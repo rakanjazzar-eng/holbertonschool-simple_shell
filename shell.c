@@ -1,133 +1,131 @@
-#include "main.h"
+#include "shell.h"
 
 /**
- * _getenv - Custom implementation to retrieve environment variables.
- * @name: Name of the environment variable.
+ * read_line - Reads a line from standard input.
  *
- * Return: Pointer to the variable's value, or NULL if not found.
+ * Return: Pointer to the line string, or NULL on EOF/error.
  */
-char *_getenv(const char *name)
+char *read_line(void)
 {
-	int i = 0;
-	size_t len = strlen(name);
+	char *line = NULL;
+	size_t bufsize = 0;
+	ssize_t nread;
 
-	if (!environ || !name)
-		return (NULL);
-
-	while (environ[i] != NULL)
+	nread = getline(&line, &bufsize, stdin);
+	if (nread == -1)
 	{
-		if (strncmp(environ[i], name, len) == 0 && environ[i][len] == '=')
-			return (environ[i] + len + 1);
-		i++;
+		free(line);
+		return (NULL);
 	}
-	return (NULL);
+
+	if (line[nread - 1] == '\n')
+		line[nread - 1] = '\0';
+
+	return (line);
 }
 
 /**
- * find_path - Searches for a command across the directories in PATH.
- * @command: The command name to look up.
+ * resolve_cmd - Resolves the full path of a command.
+ * @args: Arguments array, args[0] is the command.
+ * @argv0: Shell name for printing correct error messages.
  *
- * Return: Full path string if found, or NULL if it doesn't exist.
+ * Return: Full path string, or NULL if not found.
  */
-char *find_path(char *command)
+static char *resolve_cmd(char **args, char *argv0)
 {
-	char *path_env = _getenv("PATH");
-	char *path_copy, *token, *full_path;
-	struct stat st;
+	char *cmd_path = NULL;
 
-	if (!command || strlen(command) == 0)
-		return (NULL);
-
-	if (strchr(command, '/') != NULL)
+	/* If command is already a direct or relative path */
+	if (args[0][0] == '/' || args[0][0] == '.')
 	{
-		if (stat(command, &st) == 0)
-			return (strdup(command));
-		return (NULL);
-	}
-
-	if (!path_env || strlen(path_env) == 0)
-		return (NULL);
-
-	path_copy = strdup(path_env);
-	token = strtok(path_copy, ":");
-	while (token != NULL)
-	{
-		full_path = malloc(strlen(token) + strlen(command) + 2);
-		if (!full_path)
+		if (access(args[0], X_OK) == -1)
 		{
-			free(path_copy);
+			fprintf(stderr, "%s: 1: %s: not found\n", argv0, args[0]);
 			return (NULL);
 		}
-		sprintf(full_path, "%s/%s", token, command);
-		if (stat(full_path, &st) == 0)
-		{
-			free(path_copy);
-			return (full_path);
-		}
-		free(full_path);
-		token = strtok(NULL, ":");
+		return (strdup(args[0]));
 	}
-	free(path_copy);
-	return (NULL);
+
+	cmd_path = find_in_path(args[0]);
+	if (cmd_path == NULL)
+		fprintf(stderr, "%s: 1: %s: not found\n", argv0, args[0]);
+
+	return (cmd_path);
 }
 
 /**
- * launch_process - Forks the current process and executes a command.
- * @command: NULL-terminated array of arguments.
- * @prog_name: Name of the executable for error printing.
- * @actual_path: The resolved full path of the command.
+ * fork_and_exec - Forks a child process and runs execve.
+ * @cmd_path: Resolved executable path.
+ * @args: Arguments array.
+ * @argv0: Shell name for error messages.
  *
- * Return: The exit status code of the child process.
+ * Return: Exit status of the child, or 1 on failure.
  */
-int launch_process(char **command, char *prog_name, char *actual_path)
+static int fork_and_exec(char *cmd_path, char **args, char *argv0)
 {
 	pid_t pid;
 	int status;
-	int exit_code = 0;
 
 	pid = fork();
 	if (pid == -1)
 	{
-		perror(prog_name);
-		return (1);
+		perror("fork");
+		return (-1);
 	}
 
 	if (pid == 0)
 	{
-		if (execve(actual_path, command, environ) == -1)
+		if (execve(cmd_path, args, environ) == -1)
 		{
-			perror(prog_name);
-			_exit(127);
+			fprintf(stderr, "%s: 1: %s: not found\n", argv0, args[0]);
+			free(cmd_path);
+			exit(127);
 		}
 	}
-	else
-	{
-		if (waitpid(pid, &status, 0) == -1)
-		{
-			perror(prog_name);
-		}
-		else
-		{
-			/* Extract the exact exit status of the child process */
-			if (WIFEXITED(status))
-				exit_code = WEXITSTATUS(status);
-		}
-	}
-	return (exit_code);
+
+	waitpid(pid, &status, 0);
+	if (WIFEXITED(status))
+		return (WEXITSTATUS(status));
+	return (1);
 }
 
 /**
- * print_env - Prints the current environment variables to standard output.
+ * execute_command - Resolves and executes a command without blind forking.
+ * @args: Array of arguments (args[0] is the command).
+ * @argv0: Name of the shell for precise error messages.
  *
- * Return: Void.
+ * Return: Exit status of the child, or 127 if not found.
+ */
+int execute_command(char **args, char *argv0)
+{
+	char *cmd_path = NULL;
+	int status = 0;
+
+	cmd_path = resolve_cmd(args, argv0);
+	if (cmd_path == NULL)
+		return (127);
+
+	status = fork_and_exec(cmd_path, args, argv0);
+
+	free(cmd_path);
+
+	return (status);
+}
+
+/**
+ * print_env - Prints all current environment variables using write.
  */
 void print_env(void)
 {
 	int i = 0;
 
+	if (!environ)
+		return;
+
 	while (environ[i] != NULL)
 	{
-		printf("%s\n", environ[i]);
+		write(STDOUT_FILENO, environ[i], strlen(environ[i]));
+		write(STDOUT_FILENO, "\n", 1);
 		i++;
 	}
 }
