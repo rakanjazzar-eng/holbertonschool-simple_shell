@@ -1,75 +1,90 @@
 #include "main.h"
 
 /**
- * main - Open shell, project base.
+ * run_shell - Main loop for reading and processing commands.
+ * @prog_name: Name of the executable for error printing.
  *
- * Return: The exit status of the last executed command.
+ * Return: Void.
  */
-int main(void)
+void run_shell(char *prog_name)
 {
-	char *buff = NULL, **args;
-	size_t read_size = 0;
-	ssize_t buff_size = 0;
-	int exit_status = 0;
+	char *line = NULL, *actual_path = NULL;
+	size_t len = 0;
+	ssize_t nread;
+	char *args[1024]; /* تعريف مصفوفة المؤشرات بشكل صحيح وسليم */
+	char *token;
+	int i;
 
 	while (1)
 	{
-		/* Print prompt only if connected to a terminal */
-		if (isatty(STDIN_FILENO))
-			printf("hsh$ ");
+		if (isatty(STDIN_FILENO) == 1)
+			write(STDOUT_FILENO, "($) ", 4);
 
-		buff_size = getline(&buff, &read_size, stdin);
-		if (buff_size == -1 || _strcmp("exit\n", buff) == 0)
+		nread = getline(&line, &len, stdin);
+		if (nread == -1)
 		{
-			free(buff);
-			break;
+			free(line);
+			exit(EXIT_SUCCESS);
 		}
 
-		/* Remove trailing newline character */
-		if (buff[buff_size - 1] == '\n')
-			buff[buff_size - 1] = '\0';
-
-		/* Handle the "env" Built-in command */
-		if (_strcmp("env", buff) == 0)
+		i = 0;
+		token = strtok(line, " \t\n");
+		while (token != NULL && i < 1023)
 		{
-			_env();
-			continue;
+			args[i++] = token;
+			token = strtok(NULL, " \t\n");
 		}
+		args[i] = NULL;
 
-		/* Skip empty lines safely */
-		if (strlen(buff) == 0)
-			continue;
-
-		/* Split the input command into arguments array */
-		args = _split(buff, " \t");
 		if (args[0] == NULL)
+			continue;
+
+		/* معالجة الأمر المدمج exit */
+		if (strcmp(args[0], "exit") == 0)
 		{
-			free(args);
+			free(line);
+			exit(EXIT_SUCCESS);
+		}
+
+		/* معالجة الأمر المدمج env */
+		if (strcmp(args[0], "env") == 0)
+		{
+			print_env();
 			continue;
 		}
 
-		/* Resolve command full path via PATH directories */
-		args[0] = search_path(args[0]);
-
-		if (args[0] != NULL)
+		/* البحث في الـ PATH والتحقق قبل الـ fork */
+		actual_path = find_path(args[0]);
+		if (actual_path == NULL)
 		{
-			exit_status = execute(args);
-		}
-		else
-		{
-			/* Standard UNIX shell error format for missing commands */
-			fprintf(stderr, "./hsh: 1: %s: not found\n", args[0]);
-			exit_status = 127;
+			fprintf(stderr, "%s: 1: %s: not found\n", prog_name, args[0]);
 
-			if (!isatty(STDIN_FILENO))
+			if (isatty(STDIN_FILENO) != 1)
 			{
-				free(buff);
-				free(args);
+				free(line);
 				exit(127);
 			}
+			continue;
 		}
-		free(args);
+
+		launch_process(args, prog_name, actual_path);
+		free(actual_path);
 	}
-	return (exit_status);
+	free(line);
+}
+
+/**
+ * main - Entry point of the simple shell.
+ * @argc: Argument count (unused).
+ * @argv: Argument vector, argv[0] is the shell invocation name.
+ *
+ * Return: Always 0 (Success).
+ */
+int main(int argc, char **argv)
+{
+	(void)argc;
+
+	run_shell(argv[0]);
+	return (0);
 }
 
