@@ -14,10 +14,10 @@ void run_shell(char *prog_name)
 	char *args[1024];
 	char *token;
 	int i;
+	int last_status = 0; /* Tracks the exit code of the last command */
 
 	while (1)
 	{
-		/* Print prompt only if connected to a terminal */
 		if (isatty(STDIN_FILENO) == 1)
 			write(STDOUT_FILENO, "($) ", 4);
 
@@ -25,10 +25,9 @@ void run_shell(char *prog_name)
 		if (nread == -1)
 		{
 			free(line);
-			exit(EXIT_SUCCESS);
+			exit(last_status);
 		}
 
-		/* Tokenize the input line into an array of arguments */
 		i = 0;
 		token = strtok(line, " \t\n");
 		while (token != NULL && i < 1023)
@@ -38,7 +37,6 @@ void run_shell(char *prog_name)
 		}
 		args[i] = NULL;
 
-		/* Skip empty lines safely */
 		if (args[0] == NULL)
 			continue;
 
@@ -46,23 +44,23 @@ void run_shell(char *prog_name)
 		if (strcmp(args[0], "exit") == 0)
 		{
 			free(line);
-			exit(EXIT_SUCCESS);
+			exit(last_status); /* Exits with the last recorded command status */
 		}
 
 		/* Handle the "env" Built-in command */
 		if (strcmp(args[0], "env") == 0)
 		{
 			print_env();
+			last_status = 0;
 			continue;
 		}
 
-		/* Resolve command full path via PATH directories before fork */
 		actual_path = find_path(args[0]);
 		if (actual_path == NULL)
 		{
 			fprintf(stderr, "%s: 1: %s: not found\n", prog_name, args[0]);
+			last_status = 127;
 
-			/* Exit with 127 if in non-interactive mode */
 			if (isatty(STDIN_FILENO) != 1)
 			{
 				free(line);
@@ -71,7 +69,8 @@ void run_shell(char *prog_name)
 			continue;
 		}
 
-		launch_process(args, prog_name, actual_path);
+		/* Save the status code returned from the child process execution */
+		last_status = launch_process(args, prog_name, actual_path);
 		free(actual_path);
 	}
 	free(line);

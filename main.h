@@ -11,7 +11,7 @@
 
 extern char **environ;
 
-void launch_process(char **command, char *prog_name, char *actual_path);
+int launch_process(char **command, char *prog_name, char *actual_path);
 void run_shell(char *prog_name);
 char *_getenv(const char *name);
 char *find_path(char *command);

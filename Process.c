@@ -77,18 +77,19 @@ char *find_path(char *command)
  * @prog_name: Name of the executable for error printing.
  * @actual_path: The resolved full path of the command.
  *
- * Return: Void.
+ * Return: The exit status code of the child process.
  */
-void launch_process(char **command, char *prog_name, char *actual_path)
+int launch_process(char **command, char *prog_name, char *actual_path)
 {
 	pid_t pid;
 	int status;
+	int exit_code = 0;
 
 	pid = fork();
 	if (pid == -1)
 	{
 		perror(prog_name);
-		return;
+		return (1);
 	}
 
 	if (pid == 0)
@@ -102,8 +103,17 @@ void launch_process(char **command, char *prog_name, char *actual_path)
 	else
 	{
 		if (waitpid(pid, &status, 0) == -1)
+		{
 			perror(prog_name);
+		}
+		else
+		{
+			/* Extract the exact exit status of the child process */
+			if (WIFEXITED(status))
+				exit_code = WEXITSTATUS(status);
+		}
 	}
+	return (exit_code);
 }
 
 /**
