@@ -11,11 +11,11 @@
 
 extern char **environ;
 
-/* Core Functions Required for the Task */
+/* Core Core Functions */
 char *read_line(void);
 char **split_line(char *line);
 int execute_command(char **args, char *argv0);
-void print_env(void);
+void builtin_env(void);
 char *find_in_path(char *cmd);
 
 #endif /* SHELL_H */

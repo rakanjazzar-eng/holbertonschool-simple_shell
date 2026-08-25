@@ -1,11 +1,11 @@
 #include "shell.h"
 
 /**
- * main - Entry point for the simple UNIX shell.
+ * main - Entry point for the simple UNIX command interpreter.
  * @argc: Argument count (unused).
- * @argv: Argument vector, argv[0] used for error printing.
+ * @argv: Argument vector, argv[0] used for error messages.
  *
- * Return: Last command exit status.
+ * Return: The last command exit status.
  */
 int main(int argc __attribute__((unused)), char **argv)
 {
@@ -22,7 +22,7 @@ int main(int argc __attribute__((unused)), char **argv)
 			fflush(stdout);
 		}
 
-		/* 2. Read line and handle EOF (Ctrl+D) gracefully */
+		/* 2. Read line and handle EOF (Ctrl+D) condition */
 		line = read_line();
 		if (line == NULL)
 		{
@@ -31,7 +31,6 @@ int main(int argc __attribute__((unused)), char **argv)
 			break;
 		}
 
-		/* Skip completely empty lines */
 		if (line[0] == '\0')
 		{
 			free(line);
@@ -47,7 +46,7 @@ int main(int argc __attribute__((unused)), char **argv)
 			continue;
 		}
 
-		/* 4. Handle built-in "exit" command */
+		/* 4. Built-in: exit */
 		if (strcmp(args[0], "exit") == 0)
 		{
 			free(line);
@@ -55,17 +54,17 @@ int main(int argc __attribute__((unused)), char **argv)
 			exit(last_status);
 		}
 
-		/* 5. Handle built-in "env" command */
+		/* 5. Built-in: env */
 		if (strcmp(args[0], "env") == 0)
 		{
-			print_env();
+			builtin_env();
 			last_status = 0;
 			free(line);
 			free(args);
 			continue;
 		}
 
-		/* 6. Execute normal command and update exit status */
+		/* 6. Execute external command via PATH and fork */
 		last_status = execute_command(args, argv[0]);
 
 		free(line);

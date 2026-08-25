@@ -26,8 +26,8 @@ char *read_line(void)
 
 /**
  * resolve_cmd - Resolves the full path of a command.
- * @args: Arguments array, args[0] is the command.
- * @argv0: Shell name for printing correct error messages.
+ * @args: Null-terminated argument array, args[0] is the command.
+ * @argv0: Shell name for error messages.
  *
  * Return: Full path string, or NULL if not found.
  */
@@ -35,7 +35,6 @@ static char *resolve_cmd(char **args, char *argv0)
 {
 	char *cmd_path = NULL;
 
-	/* If command is already a direct or relative path */
 	if (args[0][0] == '/' || args[0][0] == '.')
 	{
 		if (access(args[0], X_OK) == -1)
@@ -54,12 +53,12 @@ static char *resolve_cmd(char **args, char *argv0)
 }
 
 /**
- * fork_and_exec - Forks a child process and runs execve.
+ * fork_and_exec - Forks a child and runs the command via execve.
  * @cmd_path: Resolved executable path.
- * @args: Arguments array.
+ * @args: Null-terminated argument array.
  * @argv0: Shell name for error messages.
  *
- * Return: Exit status of the child, or 1 on failure.
+ * Return: Exit status of the child, or 1 on abnormal termination.
  */
 static int fork_and_exec(char *cmd_path, char **args, char *argv0)
 {
@@ -91,10 +90,10 @@ static int fork_and_exec(char *cmd_path, char **args, char *argv0)
 
 /**
  * execute_command - Resolves and executes a command without blind forking.
- * @args: Array of arguments (args[0] is the command).
+ * @args: Null-terminated array of arguments (args[0] is the command).
  * @argv0: Name of the shell for precise error messages.
  *
- * Return: Exit status of the child, or 127 if not found.
+ * Return: Exit status of the child, 127 if not found.
  */
 int execute_command(char **args, char *argv0)
 {
@@ -113,9 +112,9 @@ int execute_command(char **args, char *argv0)
 }
 
 /**
- * print_env - Prints all current environment variables using write.
+ * builtin_env - Prints all current environment variables.
  */
-void print_env(void)
+void builtin_env(void)
 {
 	int i = 0;
 
